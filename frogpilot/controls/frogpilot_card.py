@@ -18,9 +18,7 @@ class FrogPilotCard:
     self.very_long_press_threshold = CRUISE_LONG_PRESS * 5
 
     self.always_on_lateral_allowed = False
-    self.cruise_available_previously = True
     self.force_coast = False
-    self.lkas_press_used = False
     self.manual_transmission = self.car.CP.transmissionType == car.CarParams.TransmissionType.manual
     self.onroad_distance_button = False
     self.pause_lateral = False
@@ -34,7 +32,6 @@ class FrogPilotCard:
     self.gap_counter = 0
 
     self.error_log = frogpilot_paths.ERROR_FILE_PATH
-    self.lkas_starts_lateral = self.car.CP.carName not in frogpilot_variables.LKAS_STATUS_BRANDS
 
     self.ui_event_sock = messaging.sub_sock("frogpilotUIEvent")
 
@@ -88,20 +85,7 @@ class FrogPilotCard:
 
         self.always_on_lateral_allowed |= any(panda_state.controlsAllowed for panda_state in sm["pandaStates"])
     elif frogpilot_toggles.always_on_lateral_main:
-      self.always_on_lateral_allowed |= sm["carControl"].enabled or not self.cruise_available_previously
-      self.always_on_lateral_allowed &= carState.cruiseState.available
-
-      if carState.cruiseState.available and self.lkas_starts_lateral and not self.always_on_lateral_allowed:
-        if any(be.pressed and be.type == ButtonType.lkas for be in carState.buttonEvents):
-          self.always_on_lateral_allowed = True
-          self.lkas_press_used = True
-
-      if carState.canValid:
-        self.cruise_available_previously = carState.cruiseState.available
-
-    if self.lkas_press_used:
-      self.lkas_press_used = not any(not be.pressed and be.type == ButtonType.lkas for be in carState.buttonEvents)
-      carState.buttonEvents = [be.copy() for be in carState.buttonEvents if be.type != ButtonType.lkas]
+      self.always_on_lateral_allowed = carState.cruiseState.available
 
     self.always_on_lateral_enabled = self.always_on_lateral_allowed and frogpilot_toggles.always_on_lateral_set
     self.always_on_lateral_enabled &= carState.gearShifter not in frogpilot_variables.NON_DRIVING_GEARS
